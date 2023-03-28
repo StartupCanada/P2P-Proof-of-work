@@ -1,0 +1,99 @@
+import hashlib
+import datetime
+
+class Block:
+    def __init__(self, timestamp, transactions, previous_hash, nonce=0):
+        self.timestamp = timestamp
+        self.transactions = transactions
+        self.previous_hash = previous_hash
+        self.nonce = nonce
+        self.hash = self.calculate_hash()
+    
+    def calculate_hash(self):
+        block_string = str(self.timestamp) + str(self.transactions) + str(self.previous_hash) + str(self.nonce)
+        return hashlib.sha256(block_string.encode()).hexdigest()
+
+class Transaction:
+    def __init__(self, sender, receiver, amount):
+        self.sender = sender
+        self.receiver = receiver
+        self.amount = amount
+    
+    def __str__(self):
+        return f'{self.sender} sent {self.amount} energy to {self.receiver}'
+
+class Blockchain:
+    def __init__(self):
+        self.chain = [Block(datetime.datetime.now(), [], None)]
+        self.pending_transactions = []
+        self.difficulty = 4
+        
+    def add_transaction(self, transaction):
+        self.pending_transactions.append(transaction)
+        
+    def mine_block(self, miner):
+        transactions = self.pending_transactions
+        self.pending_transactions = []
+        previous_hash = self.chain[-1].hash
+        nonce = 0
+        block = Block(datetime.datetime.now(), transactions, previous_hash, nonce)
+        while not self.is_valid_block(block):
+            nonce += 1
+            block.nonce = nonce
+            block.hash = block.calculate_hash()
+        self.chain.append(block)
+        print(f'{miner} mined a block with hash {block.hash}')
+        
+    def is_valid_block(self, block):
+        return (block.hash.startswith('0' * self.difficulty) and 
+                block.previous_hash == self.chain[-1].hash and
+                all(isinstance(tx, Transaction) for tx in block.transactions) and
+                all(self.is_valid_transaction(tx) for tx in block.transactions))
+    
+    def is_valid_transaction(self, transaction):
+        return (transaction.sender.balance >= transaction.amount and
+                transaction.amount > 0 and
+                isinstance(transaction.sender, User) and
+                isinstance(transaction.receiver, User) and
+                transaction.sender != transaction.receiver)
+    
+    def print_chain(self):
+        for block in self.chain:
+            print(f'Block hash: {block.hash}')
+            print(f'Block timestamp: {block.timestamp}')
+            print(f'Block transactions: {block.transactions}\n')
+            
+class User:
+    def __init__(self, name, balance):
+        self.name = name
+        self.balance = balance
+        self.energy = 0
+        
+    def buy_energy(self, seller, amount, price):
+        cost = amount * price
+        if self.balance >= cost:
+            self.balance -= cost
+            self.energy += amount
+            transaction = Transaction(self, seller, amount)
+            blockchain.add_transaction(transaction)
+        else:
+            raise ValueError("Insufficient funds")
+        
+    def sell_energy(self, buyer, amount, price):
+        if self.energy >= amount:
+            self.energy -= amount
+            self.balance += amount * price
+            transaction = Transaction(self, buyer, amount)
+            blockchain.add_transaction(transaction)
+        else:
+            raise ValueError("Insufficient energy")
+
+if __name__ == '__main__':
+    blockchain = Blockchain()
+    alice = User('Alice', 1000)
+    bob = User('Bob', 1000)
+    charlie = User('Charlie', 1000)
+    blockchain.add_transaction(Transaction(alice, bob, 50))
+    blockchain.mine_block('Alice')
+    alice.buy_energy(bob, 25, 2)
+    alice.buy_energy
